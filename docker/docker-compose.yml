@@ -1,0 +1,29 @@
+services:
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      POSTGRES_USER: ts_user
+      POSTGRES_PASSWORD: ts_pass
+      POSTGRES_DB: ticks
+    ports: ["5432:5432"]
+
+  listener:
+    build: ../websocket-listener
+    env_file:
+      - ../websocket-listener/.env
+    depends_on:
+      - redis
+
+  consumer:
+    build: ../redis-consumer
+    environment:
+      POSTGRES_USER: ts_user
+      POSTGRES_PASSWORD: ts_pass
+      POSTGRES_DB: ticks
+    depends_on:
+      - redis
+      - timescaledb

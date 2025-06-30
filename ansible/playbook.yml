@@ -1,0 +1,12 @@
+- name: Install k3s on EC2
+  hosts: k3s
+  become: yes
+  tasks:
+    - name: Install k3s
+      shell: curl -sfL https://get.k3s.io | sh -
+
+    - name: Wait for k3s to be ready
+      shell: |
+        until kubectl get nodes; do sleep 5; done
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
