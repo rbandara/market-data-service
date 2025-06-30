@@ -1,4 +1,3 @@
-<<<<<<< HEAD
  Stage 1: Provision + Base Cluster (Your Current provision.sh)
 Terraform creates EC2
 
