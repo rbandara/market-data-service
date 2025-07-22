@@ -1,12 +1,33 @@
-- name: Install k3s on EC2
-  hosts: k3s
-  become: yes
+- hosts: all
+  become: true
   tasks:
-    - name: Install k3s
+    - name: Install dependencies
+      yum:
+        name:
+          - curl
+          - unzip
+        state: present
+
+    - name: Install K3s
       shell: curl -sfL https://get.k3s.io | sh -
 
-    - name: Wait for k3s to be ready
+    - name: Install Helm
       shell: |
-        until kubectl get nodes; do sleep 5; done
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+
+    - name: Add Bitnami repo
+      become: true
+      shell: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+    - name: Update Helm repos
+      become: true
+      shell: helm repo update
+
+    - name: Install Redis
+      become: true
+      shell: helm install redis bitnami/redis --set auth.enabled=false
+
+    - name: Install TimescaleDB
+      become: true
+      shell: helm install timescaledb bitnami/postgresql --set postgresqlDatabase=timescale

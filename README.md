@@ -1,64 +1,132 @@
-<<<<<<< HEAD
- Stage 1: Provision + Base Cluster (Your Current provision.sh)
-Terraform creates EC2
+# Market Data Service (Real-Time Ingestion on K3s)
 
-Ansible installs k3s
+This project sets up a real-time market data ingestion pipeline using Redis and TimescaleDB, deployed on a lightweight K3s Kubernetes cluster. It uses **Terraform** to provision infrastructure (if needed), and **Ansible** for post-deployment configuration. **Helm** is used to install components on Kubernetes.
 
-✅ At the end of this step, you should be able to:
+---
 
-SSH into EC2
+## 📁 Project Structure
 
-Run kubectl get nodes
+market-data-service/
+├── ansible/ # Ansible playbooks for config tasks
+│ ├── inventory.ini
+│ └── playbook.yml
+├── database/ # DB schema, seed data, or migrations
+├── docker/ # Dockerfiles or docker-compose (optional)
+├── k8-manifests/ # Custom K8s manifests (if not using Helm)
+├── redis-consumer/ # Redis consumer microservice
+├── terraform/ # Terraform modules (optional if using EC2)
+├── websocket-listener/ # WebSocket tick ingestor service
+├── provision.sh # Shell script to kickstart provisioning
+└── README.md # You're here!
 
-Verify k3s is running
 
-Stage 2: Install Core Services (Optional Separate Script or Step)
-Use Helm or kubectl to install:
 
-✅ Redis
+---
 
-✅ Prometheus + Grafana
+## 🚀 Setup Guide
 
-✅ Cert Manager (if needed)
+### 1. Prerequisites
 
-✅ Ingress (like NGINX)
+- [Ansible](https://docs.ansible.com/)
+- [Terraform](https://www.terraform.io/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [K3s](https://k3s.io/)
+- [Helm](https://helm.sh/)
+- SSH access to K3s nodes (local or remote)
 
-This can be:
+---
 
-bash
-Copy
-Edit
-./install-core-services.sh
-Inside that script:
+## 🛠 Provisioning & Configuration
 
-bash
-Copy
-Edit
-# Add Helm repos
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+### Step 1: Provision Infrastructure (Optional)
 
-# Install Redis
-helm install redis bitnami/redis
 
-# Install Prometheus + Grafana
-helm install kube-prometheus prometheus-community/kube-prometheus-stack
-🛠️ Stage 3: Deploy Your Apps
-Your WebSocket listener
+```bash
+cd terraform
+terraform init
+terraform apply
+```
 
-Any Python consumers
+This creates EC2 instances or desired infra with necessary security groups.
 
-Database writer
 
-Web front-end if needed
+Step 2: Configure K3s Cluster with Ansible
+Update your ansible/inventory.ini with your K3s node IPs:
 
-Use Helm charts or simple YAML manifests.
+```
+[k3s]
+192.168.1.100 ansible_user=ubuntu
 
-📦 Option: Group with kustomize or Helmfile
-If you want to automate the stack later:
 
-Use kustomize to group apps into environments
+Run the playbook:
 
-Use helmfile to declaratively install Helm charts
+```
+cd ansible
+ansible-playbook -i inventory.ini playbook.yml
 
+
+This will:
+
+Install TimescaleDB on K3s (via Helm)
+
+Install Redis on K3s (via Helm)
+
+Setup required namespaces, PVCs, configs
+
+
+Step 3: Deploy Microservices
+
+If you’re using Helm:
+
+```
+helm install redis oci://registry-1.docker.io/bitnamicharts/redis
+helm install timescaledb oci://registry-1.docker.io/bitnamicharts/postgresql
+
+```
+
+If you're using raw K8s manifests:
+
+kubectl apply -f k8-manifests/
+
+
+
+Microservices Overview
+websocket-listener
+Connects to market data feed
+
+Publishes ticks to Redis Streams
+
+redis-consumer
+Subscribes to Redis stream
+
+Stores market ticks into TimescaleDB
+
+
+
+
+### 🧱 Deployment Approach
+
+| Component     | Tool      | Approach                                    |
+|---------------|-----------|---------------------------------------------|
+| Redis         | Ansible   | Installed directly on k3s nodes             |
+| TimescaleDB   | Ansible   | Installed directly on k3s nodes             |
+| Prometheus    | Helm      | Installed via Helm charts in Kubernetes     |
+| Grafana       | Helm      | Installed via Helm charts in Kubernetes     |
+| Provisioning  | Terraform | Provisions EC2, networking, etc.            |
+| Configuration | Ansible   | Configures nodes, installs base software    |
+
+
+
+
+
+## Useful commands
+
+### View pods
+kubectl get pods -A
+
+### Port-forward TimescaleDB
+kubectl port-forward svc/timescaledb 5432:5432 -n <namespace>
+
+### Access Redis CLI
+kubectl exec -it <redis-pod> -- redis-cli
 
