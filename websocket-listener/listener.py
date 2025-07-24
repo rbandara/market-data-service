@@ -1,4 +1,5 @@
 import nest_asyncio
+
 nest_asyncio.apply()
 
 import asyncio
@@ -15,13 +16,7 @@ stream = StockDataStream(API_KEY, API_SECRET)
 print("started redus steaming")
 
 
-from prometheus_client import start_http_server, Counter
-
-tick_counter = Counter('alpaca_ticks_received', 'Number of Alpaca ticks received')
-
-
 async def handle_trade(trade):
-    tick_counter.inc()
     msg = {
         "symbol": trade.symbol,
         "price": str(trade.price),
@@ -30,14 +25,13 @@ async def handle_trade(trade):
     redis_client.xadd("ticks", msg)
     print(f"[{trade.symbol}] {trade.price} @ {trade.timestamp}")
 
+
 async def main():
     print("Subscribing to trades...")
 
-    start_http_server(9102)  # For listener or 9102 for consumer
-    asyncio.run(main())
- 
     stream.subscribe_trades(handle_trade, "SPY", "QQQ")
     await stream.run()
+
 
 if __name__ == "__main__":
     try:
